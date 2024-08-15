@@ -1,0 +1,34 @@
+environment: pet-environment-homolog
+### Project Settings
+componentId: dynamic-cluster-config
+cluster_name: dynamic-cluster-config
+owner: group:default/admin
+instance_type: t3.medium
+volume_size: 30
+keypair_name: platform_kp
+### Network Settings
+vpc_id: vpc-051721395ecf1f7aa
+domain: pet.platform.vee.codes
+hostedZoneId: Z0420419WKDTM5OR7WI9
+subnet_id: subnet-04dda6147dd9410f1
+### Ingress Settings
+ingress_window: true
+basic_auth: true
+issuer_type: staging
+email: platformss@vee.codes
+### Terraform Backend Settings
+terraformStateBucketName: veecode-homolog-terraform-state
+terraformStateBucketRegion: us-east-1
+infracost: true
+### Publish Settings
+host: github.com
+destination: veecode-homolog/dynamic-cluster-config
+specPublish: ${{ parameters.specPublish | parseRepoUrl | pick('owner') }}/${{ parameters.specPublish | parseRepoUrl | pick('repo') }}
+specPublishRepo: ${{ parameters.specPublish | parseRepoUrl | pick('repo') }}
+specPublishBranch: 
+### Observability Settings
+observability_window: false
+## Cluster configuration 
+cluster_obs_name: central-otlp
+cluster_obs_domain: pet.platform.vee.codes
+cluster_obs_public_ip: 100.25.68.207

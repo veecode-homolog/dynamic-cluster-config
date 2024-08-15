@@ -1,0 +1,167 @@
+name: Create
+
+on:
+  workflow_dispatch:
+env:
+  PORT: 6550
+  USERNAME: ec2-user
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: hashicorp/setup-terraform@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            .terraform/**
+            .terraform.lock.hcl
+            plan.cache
+          key: terraform-lock-${{ github.head_ref || github.ref_name }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          
+      - name: Terraform plan
+        run: |
+          terraform init
+          terraform plan -no-color -out plan_cache.json 
+
+      - name: Terraform apply
+        run: |
+          terraform apply -input=false -no-color -auto-approve plan_cache.json
+
+  kubeconfig:
+    runs-on: ubuntu-latest
+    needs: apply
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: hashicorp/setup-terraform@v2
+      - name: Write secret to file
+        run: |
+          echo "${{ secrets.KEYPAIR }}" > cert.pem
+          chmod 600 cert.pem
+          
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Waiting for cluster to be ready
+        run: |
+          HOST=`aws ec2 describe-instances --filters 'Name=tag:Name,Values=dynamic-cluster-config'   --output text --query 'Reservations[*].Instances[*].PublicIpAddress'`
+          while ! nc -z $HOST $PORT; do
+            echo "waiting for cluster to be ready..."
+            sleep 2
+          done
+          echo "Cluster Ready!"
+          echo "Host=$HOST" >> $GITHUB_ENV
+
+      - name: Generate kube config with k3d
+        run: |
+           ssh -i ./cert.pem -o StrictHostKeyChecking=no $USERNAME@${{  env.Host }} "k3d kubeconfig get k3s > config"
+ 
+      - name: Download kube config
+        run: |
+           mkdir -p ~/.kube
+           scp -i ./cert.pem -o StrictHostKeyChecking=no $USERNAME@${{ env.Host }}:config ~/.kube/config
+ 
+      - name: Print downloaded config
+        run: |  
+          CERTIFICATE=`cat  ~/.kube/config |grep certificate-authority-data `
+          sed -i "s|$CERTIFICATE|    insecure-skip-tls-verify: true|g" ~/.kube/config
+          sed -i "s|0.0.0.0|${{ env.Host }}|g" ~/.kube/config
+ 
+      - name: Upload kube config
+        uses: actions/upload-artifact@v3
+        with:
+          name: kube-config
+          path: ~/.kube/config
+
+      - name: Write Catalogo Info
+        run: |
+          yq e '.metadata.environment.public_ip = "${{ env.Host }}"' -i .platform/component.yaml
+          yq -e '.metadata.annotations["cluster/instructions"] = "# Run the following commands to import the kubeconfig:
+            ssh -i ./cert.pem -o StrictHostKeyChecking=no $USERNAME@$${{ env.Host }} \"mkdir -p .kube && k3d kubeconfig get k3s > ~/.kube/config\"
+            scp -i ./cert.pem $USERNAME@$${{ env.Host }}:~/.kube/config ~/.kube/config-dynamic-cluster-config
+            yq -e '\''del(.clusters[0].cluster.certificate-authority-data) | .clusters[0].cluster.insecure-skip-tls-verify=true | .clusters[].cluster.server |= sub(\"0.0.0.0\", \"${{ env.Host }}\")'\'' -i ~/.kube/config-dynamic-cluster-config
+            export KUBECONFIG=~/.kube/config-dynamic-cluster-config
+            kubectl get pods -A
+          "' -i .platform/component.yaml
+          cat ./.platform/component.yaml
+
+      - name: Temporarily disable branch protection
+        uses: benjefferies/branch-protection-bot@master
+        if: always()
+        with:
+          access_token: ${{ secrets.API_TOKEN_GITHUB }}
+          branch: ${{ github.event.repository.default_branch }}
+
+      - name: Publish catalog info
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          repository: ".platform/"
+          commit_user_name: veecode-bot
+          commit_user_email: github-admin@vee.codes
+          commit_author: veecode-bot<github-admin@vee.codes>
+          commit_message: "Update catalog-info.yaml with cluster endpoint"
+          push_options: '--force'
+
+  ingress-apply:
+    runs-on: ubuntu-latest
+    needs: kubeconfig
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+        
+    ### Usin k8s context
+      - name: Download kubeconfig artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: kube-config
+          path: ~/.kube
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
+      - name: Add Postgresql Helm repository
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+    
+      - name: Install Postgresql
+        run: |
+          helm upgrade --install postgresql bitnami/postgresql --version 15.5.17 -f postgres.yaml -n vkpr --create-namespace
+
+      - name: Apply Prometheus CRD from ServiceMonitor
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
+        
+      - name: Add Kong Helm repository
+        run: |
+          helm repo add kong https://charts.konghq.com
+          helm repo update
+  
+      - name: Install Kong
+        run: |
+          helm upgrade --install kong kong/kong --version 2.39.3 -f kong.yaml -n vkpr --create-namespace
+
+      - name: Apply Kong Plugins
+        run: |
+            kubectl apply -f kong-acme.yaml -n vkpr
+            kubectl apply -f kong-plugin-basicauth.yaml -n vkpr
+
