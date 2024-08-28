@@ -52,3 +52,22 @@ jobs:
         run: |
           terraform init
           terraform destroy -auto-approve
+
+      - name: GitHub Action for DigitalOcean - doctl
+        uses: digitalocean/action-doctl@v2.3.0
+        with:
+          token: ${{ secrets.DO_TOKEN }}
+
+      - name: Configure kubectl for the DigitalOcean Cluster
+        run: |
+          doctl kubernetes cluster kubeconfig save dd69495e-d62a-426d-aa00-b4d71e43581b
+
+      - name: Extract Cluster Name from YAML
+        run: |
+          CLUSTER_NAME=$(yq e '.metadata.name' ./.platform/component.yaml)
+          echo "CLUSTER_NAME=$CLUSTER_NAME" >> $GITHUB_ENV
+          echo "Cluster Name capturado: $CLUSTER_NAME"
+
+      - name: Delete Secret from DigitalOcean Cluster
+        run: |
+          kubectl delete secret ${{ env.CLUSTER_NAME }}-secret -n $GITHUB_REPOSITORY_OWNER || true
