@@ -158,3 +158,7 @@ resource "aws_route53_record" "sub_domain" {
 output "instance_ip_addr" {
   value       = aws_eip.webip.public_ip
 }
+
+output "cluster_name" {
+  value = local.config.cluster_name
+}
