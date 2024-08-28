@@ -64,9 +64,6 @@ jobs:
           echo "Cluster Ready!"
           echo "Host=$HOST" >> $GITHUB_ENV
 
-          CLUSTER_NAME=$(terraform output -raw cluster_name)
-          echo "CLUSTER_NAME=$CLUSTER_NAME" >> $GITHUB_ENV
-
       - name: Generate kube config with k3d
         run: |
            ssh -i ./cert.pem -o StrictHostKeyChecking=no $USERNAME@${{  env.Host }} "k3d kubeconfig get k3s > config"
@@ -198,4 +195,4 @@ jobs:
 
       - name: Create Secret in the DigitalOcean Cluster
         run: |
-          kubectl create secret generic ${CLUSTER_NAME}-secret -n $GITHUB_REPOSITORY_OWNER --from-literal=token=${SERVICE_ACCOUNT_TOKEN}
+          kubectl create secret generic k3d-k3s-secret -n $GITHUB_REPOSITORY_OWNER --from-literal=token=${SERVICE_ACCOUNT_TOKEN}
