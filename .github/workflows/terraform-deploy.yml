@@ -168,12 +168,12 @@ jobs:
       - name: Apply Service Account to the Cluster
         run: |
           chmod +x ./k8s-service-account/apply.sh
-          ./k8s-service-account/apply.sh
+          ./k8s-service-account/apply.sh | tee output.log
 
       - name: Get Service Account Token
         id: get-token
         run: |
-          TOKEN=$(awk '/Service Account Token:/ {print $NF}' $GITHUB_STEP_SUMMARY)
+          TOKEN=$(awk '/Service Account Token:/ {print $NF}' output.log)
           echo "SERVICE_ACCOUNT_TOKEN=$TOKEN" >> $GITHUB_ENV
           echo "Service Account Token capturado: ${TOKEN:0:4}..."
 
