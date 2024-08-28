@@ -9,21 +9,15 @@ metadata:
     certificate_account_email: platformss@vee.codes
     certificate_environment_type: staging
     grafana_obs_api: https://grafana.central-otlp.pet.platform.vee.codes
+    public_ip: 3.217.176.88
   annotations:
     github.com/project-slug: veecode-homolog/dynamic-cluster-config
-    infracost/project: dynamic-cluster-config 
+    infracost/project: dynamic-cluster-config
     backstage.io/techdocs-ref: dir:..
-    github.com/workflows: terraform-deploy.yml,start-instance.yml,stop-instance.yml,kubeconfig.yml,terraform-destroy.yml,infracost.yml   
-    cluster/instructions: |
-      ssh -i ./key-pair.pem -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 
-      "mkdir -p .kube && k3d kubeconfig get ${CLUSTER_NAME} > ~/.kube/config"
-      scp -i ./key-pair.pem ${EC2_USER}@${EC2_HOST}:~/.kube/config ./config
-      yq e 'del(.clusters[0].cluster.certificate-authority-data)' -i ~/.kube/config
-      yq e '.clusters[0].cluster.insecure-skip-tls-verify=true' config -i
-      yq e '.clusters[0].cluster.server = "https://${EC2_HOST}:38517"' config -i
+    github.com/workflows: terraform-deploy.yml,start-instance.yml,stop-instance.yml,kubeconfig.yml,terraform-destroy.yml,infracost.yml
+    cluster/instructions: "# Run the following commands to import the kubeconfig:\n  ssh -i ./cert.pem -o StrictHostKeyChecking=no $USERNAME@$3.217.176.88 \"mkdir -p .kube && k3d kubeconfig get k3s > ~/.kube/config\"\n  scp -i ./cert.pem $USERNAME@$3.217.176.88:~/.kube/config ~/.kube/config-dynamic-cluster-config\n  yq -e 'del(.clusters[0].cluster.certificate-authority-data) | .clusters[0].cluster.insecure-skip-tls-verify=true | .clusters[].cluster.server |= sub(\"0.0.0.0\", \"3.217.176.88\")' -i ~/.kube/config-dynamic-cluster-config\n  export KUBECONFIG=~/.kube/config-dynamic-cluster-config\n  kubectl get pods -A\n"
 spec:
   type: ec2
   lifecycle: experimental
   owner: "group:default/admin"
   environment: 'environment:default/pet-environment-homolog'
-  
