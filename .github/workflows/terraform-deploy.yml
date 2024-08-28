@@ -196,7 +196,7 @@ jobs:
 
       - name: Extract Cluster Name from YAML
         run: |
-          CLUSTER_NAME=$(yq e '.metadata.name' .platform/components.yaml)
+          CLUSTER_NAME=$(yq e '.metadata.name' ./.platform/component.yaml)
           echo "CLUSTER_NAME=$CLUSTER_NAME" >> $GITHUB_ENV
           echo "Cluster Name capturado: $CLUSTER_NAME"
 
