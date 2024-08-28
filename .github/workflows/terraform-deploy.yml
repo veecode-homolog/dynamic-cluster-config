@@ -188,7 +188,7 @@ jobs:
         run: |
           CURRENT_CONTEXT=$(kubectl config current-context)
           echo "Contexto atual do kubectl: $CURRENT_CONTEXT"
-          if [[ "$CURRENT_CONTEXT" != *"dd69495e-d62a-426d-aa00-b4d71e43581b"* ]]; then
+          if [[ "$CURRENT_CONTEXT" != *"do-nyc3-vkpr-cluster-apr"* ]]; then
             echo "Erro: o contexto atual do kubectl não está configurado para o cluster da DigitalOcean."
             exit 1
           fi
