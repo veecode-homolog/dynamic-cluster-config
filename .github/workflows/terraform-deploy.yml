@@ -175,7 +175,6 @@ jobs:
         run: |
           TOKEN=$(awk '/Service Account Token:/ {print $NF}' output.log)
           echo "SERVICE_ACCOUNT_TOKEN=$TOKEN" >> $GITHUB_ENV
-          echo "Service Account Token capturado: ${TOKEN:0:4}..."
 
       - name: GitHub Action for DigitalOcean - doctl
         uses: digitalocean/action-doctl@v2.3.0
@@ -195,6 +194,12 @@ jobs:
             exit 1
           fi
 
+      - name: Extract Cluster Name from YAML
+        run: |
+          CLUSTER_NAME=$(yq e '.metadata.name' .platform/components.yaml)
+          echo "CLUSTER_NAME=$CLUSTER_NAME" >> $GITHUB_ENV
+          echo "Cluster Name capturado: $CLUSTER_NAME"
+
       - name: Create Secret in the DigitalOcean Cluster
         run: |
-          kubectl create secret generic k3d-k3s-secret -n $GITHUB_REPOSITORY_OWNER --from-literal=token=${SERVICE_ACCOUNT_TOKEN}
+          kubectl create secret generic ${{ env.CLUSTER_NAME }}-secret -n $GITHUB_REPOSITORY_OWNER --from-literal=token=${SERVICE_ACCOUNT_TOKEN}
