@@ -169,3 +169,30 @@ jobs:
         run: |
           chmod +x ./k8s-service-account/apply.sh
           ./k8s-service-account/apply.sh
+
+      - name: Get Service Account Token
+        run: |
+          TOKEN=$(awk '/Service Account Token:/ {print $NF}' $GITHUB_STEP_SUMMARY)
+          echo "SERVICE_ACCOUNT_TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: GitHub Action for DigitalOcean - doctl
+        uses: digitalocean/action-doctl@v2.3.0
+        with:
+          token: ${{ secrets.DO_TOKEN }}
+
+      - name: Configure kubectl for the DigitalOcean Cluster
+        run: |
+          doctl kubernetes cluster kubeconfig save dd69495e-d62a-426d-aa00-b4d71e43581b
+
+      - name: Check current kubectl context
+        run: |
+          CURRENT_CONTEXT=$(kubectl config current-context)
+          echo "Contexto atual do kubectl: $CURRENT_CONTEXT"
+          if [[ "$CURRENT_CONTEXT" != *"dd69495e-d62a-426d-aa00-b4d71e43581b"* ]]; then
+            echo "Erro: o contexto atual do kubectl não está configurado para o cluster da DigitalOcean."
+            exit 1
+          fi
+
+      - name: Create Secret in the DigitalOcean Cluster
+        run: |
+          kubectl create secret generic my-cluster-secret -n $GITHUB_REPOSITORY_OWNER --from-literal=token=${{ env.SERVICE_ACCOUNT_TOKEN }}
