@@ -212,13 +212,6 @@ jobs:
           yq e '.metadata.annotations."kubernetes.io/secret-name" = "${SECRET_NAME}"' -i .platform/component.yaml
           cat ./.platform/component.yaml
 
-      - name: Temporarily disable branch protection
-        uses: benjefferies/branch-protection-bot@master
-        if: always()
-        with:
-          access_token: ${{ secrets.GITHUB_TOKEN  }}
-          branch: ${{ github.event.repository.default_branch }}
-
       - name: Publish catalog info
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
