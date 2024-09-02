@@ -203,3 +203,21 @@ jobs:
       - name: Create Secret in the DigitalOcean Cluster
         run: |
           kubectl create secret generic ${{ env.CLUSTER_NAME }}-secret -n $GITHUB_REPOSITORY_OWNER --from-literal=token=${SERVICE_ACCOUNT_TOKEN}
+
+      - name: Write Catalogo Info
+        run: |
+          SECRET_NAME="${{ env.CLUSTER_NAME }}-secret"
+          yq e '.metadata.annotations."veecode/cluster-name" = "${{ env.CLUSTER_NAME }}"' -i .platform/component.yaml
+          yq e '.metadata.annotations."kubernetes.io/secret-namespace" = "${{ env.GITHUB_REPOSITORY_OWNER }}"' -i .platform/component.yaml
+          yq e '.metadata.annotations."kubernetes.io/secret-name" = "${SECRET_NAME}"' -i .platform/component.yaml
+          cat ./.platform/component.yaml
+
+      - name: Publish catalog info
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          repository: ".platform/"
+          commit_user_name: veecode-bot
+          commit_user_email: github-admin@vee.codes
+          commit_author: veecode-bot<github-admin@vee.codes>
+          commit_message: "Update catalog-info.yaml"
+          push_options: '--force'
