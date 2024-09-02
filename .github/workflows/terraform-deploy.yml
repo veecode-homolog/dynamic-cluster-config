@@ -221,3 +221,5 @@ jobs:
           commit_author: veecode-bot<github-admin@vee.codes>
           commit_message: "Update catalog-info.yaml"
           push_options: '--force'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
