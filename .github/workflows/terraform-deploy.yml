@@ -5,6 +5,8 @@ on:
 env:
   PORT: 6550
   USERNAME: ec2-user
+  CLUSTER_NAME: dynamic-cluster-config
+  SERVICE_ACCOUNT_NAMESPACE: "default"
 jobs:
   apply:
     runs-on: ubuntu-latest
@@ -167,16 +169,17 @@ jobs:
             kubectl apply -f kong-acme.yaml -n vkpr
             kubectl apply -f kong-plugin-basicauth.yaml -n vkpr
 
-      - name: Apply Service Account to the Cluster
+      - name: Apply Service Account to the Cluster and load Env Vars
         run: |
-          chmod +x ./k8s-service-account/apply.sh
-          ./k8s-service-account/apply.sh | tee output.log
-
-      - name: Get Service Account Token
-        id: get-token
-        run: |
-          TOKEN=$(awk '/Service Account Token:/ {print $NF}' output.log)
-          echo "SERVICE_ACCOUNT_TOKEN=$TOKEN" >> $GITHUB_ENV
+          kubectl apply -f https://veecode-platform.github.io/support/references/devportal/k8s-service-account.yaml -n ${{ env.SERVICE_ACCOUNT_NAMESPACE }}
+          SERVICE_ACCOUNT_NAME=$(curl -s https://veecode-platform.github.io/support/references/devportal/k8s-service-account.yaml | yq eval '. | select(.kind == "ServiceAccount") | .metadata.name')
+          K8S_SERVER_CERTIFICATE=$(cat ~/.kube/config | yq -r ".clusters[] | select(.name == \"$CLUSTER_NAME\").cluster.certificate-authority-data")
+          K8S_SERVER_HOST=$(cat ~/.kube/config | yq -r ".clusters[] | select(.name == \"$CLUSTER_NAME\").cluster.server")
+          SERVICE_ACCOUNT_TOKEN=$(kubectl create token ${SERVICE_ACCOUNT_NAME} -n ${SERVICE_ACCOUNT_NAMESPACE} --duration=87600h)
+          echo "SERVICE_ACCOUNT_NAME=$SERVICE_ACCOUNT_NAME" >> $GITHUB_ENV
+          echo "SERVICE_ACCOUNT_TOKEN=$SERVICE_ACCOUNT_TOKEN" >> $GITHUB_ENV
+          echo "K8S_SERVER_CERTIFICATE=$K8S_SERVER_CERTIFICATE" >> $GITHUB_ENV
+          echo "K8S_SERVER_HOST=$K8S_SERVER_HOST" >> $GITHUB_ENV
 
       - name: GitHub Action for DigitalOcean - doctl
         uses: digitalocean/action-doctl@v2.3.0
@@ -196,22 +199,26 @@ jobs:
             exit 1
           fi
 
-      - name: Extract Cluster Name from YAML
-        run: |
-          CLUSTER_NAME=$(yq e '.metadata.name' ./.platform/component.yaml)
-          echo "CLUSTER_NAME=$CLUSTER_NAME" >> $GITHUB_ENV
-          echo "Cluster Name capturado: $CLUSTER_NAME"
-
       - name: Create Secret in the DigitalOcean Cluster
         run: |
-          kubectl create secret generic ${{ env.CLUSTER_NAME }}-secret -n $GITHUB_REPOSITORY_OWNER --from-literal=token=${SERVICE_ACCOUNT_TOKEN}
+          kubectl create secret generic ${{ env.CLUSTER_NAME }}-secret -n $GITHUB_REPOSITORY_OWNER --from-literal=token=${{ env.SERVICE_ACCOUNT_TOKEN }}
 
       - name: Write Catalogo Info
         run: |
           SECRET_NAME="${{ env.CLUSTER_NAME }}-secret"
           yq e '.metadata.annotations."veecode/cluster-name" = "${{ env.CLUSTER_NAME }}"' -i .platform/component.yaml
           yq e '.metadata.annotations."kubernetes.io/secret-namespace" = "${{ env.GITHUB_REPOSITORY_OWNER }}"' -i .platform/component.yaml
-          yq e '.metadata.annotations."kubernetes.io/secret-name" = "${SECRET_NAME}"' -i .platform/component.yaml
+          yq e '.metadata.annotations."kubernetes.io/secret-name" = "$SECRET_NAME"' -i .platform/component.yaml
+          yq e '.metadata.annotations."kubernetes.io/auth-provider" = "custom"' -i .platform/component.yaml
+
+          yq e '.metadata.annotations."kubernetes.io/api-server" = "${{ env.K8S_SERVER_HOST }}"' -i .platform/component.yaml
+          if [ -z "$K8S_SERVER_CERTIFICATE" ]; then
+            yq e '.metadata.annotations."kubernetes.io/skip-tls-verify" = "true"' -i .platform/component.yaml
+          else
+            yq e '.metadata.annotations."kubernetes.io/caData" = "${{ env.K8S_SERVER_CERTIFICATE }}"' -i .platform/component.yaml
+          fi
+          yq e '.metadata.annotations."kubernetes.io/skip-metrics-lookup" = "false"' -i .platform/component.yaml
+
           cat ./.platform/component.yaml
 
       - name: Publish catalog info
@@ -221,5 +228,5 @@ jobs:
           commit_user_name: veecode-bot
           commit_user_email: github-admin@vee.codes
           commit_author: veecode-bot<github-admin@vee.codes>
-          commit_message: "Update catalog-info.yaml"
+          commit_message: "Update catalog-info.yaml with cluster info"
           push_options: '--force'
