@@ -9,20 +9,11 @@ metadata:
     certificate_account_email: platformss@vee.codes
     certificate_environment_type: staging
     grafana_obs_api: https://grafana.central-otlp.pet.platform.vee.codes
-    public_ip: 54.211.184.100
   annotations:
     github.com/project-slug: veecode-homolog/dynamic-cluster-config
     infracost/project: dynamic-cluster-config
     backstage.io/techdocs-ref: dir:..
     github.com/workflows: terraform-deploy.yml,start-instance.yml,stop-instance.yml,kubeconfig.yml,terraform-destroy.yml,infracost.yml
-    cluster/instructions: "# Run the following commands to import the kubeconfig:\n  ssh -i ./cert.pem -o StrictHostKeyChecking=no $USERNAME@54.211.184.100 \"mkdir -p .kube && k3d kubeconfig get k3s > ~/.kube/config\"\n  scp -i ./cert.pem $USERNAME@$54.211.184.100:~/.kube/config ~/.kube/config-dynamic-cluster-config\n  yq -e 'del(.clusters[0].cluster.certificate-authority-data) | .clusters[0].cluster.insecure-skip-tls-verify=true | .clusters[].cluster.server |= sub(\"0.0.0.0\", \"54.211.184.100\")' -i ~/.kube/config-dynamic-cluster-config\n  export KUBECONFIG=~/.kube/config-dynamic-cluster-config\n  kubectl get pods -A\n"
-    veecode/cluster-name: dynamic-cluster-config
-    kubernetes.io/secret-namespace: veecode-homolog
-    kubernetes.io/secret-name: dynamic-cluster-config-secret
-    kubernetes.io/auth-provider: custom
-    kubernetes.io/api-server: https://54.211.184.100:6550
-    kubernetes.io/skip-tls-verify: "true"
-    kubernetes.io/skip-metrics-lookup: "false"
 spec:
   type: ec2
   lifecycle: experimental
