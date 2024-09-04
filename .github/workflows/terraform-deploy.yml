@@ -176,7 +176,7 @@ jobs:
             sed "s/default/$SERVICE_ACCOUNT_NAMESPACE/g" | \
             kubectl apply -f -
           SERVICE_ACCOUNT_NAME=$(curl -s https://veecode-platform.github.io/support/references/devportal/k8s-service-account.yaml | yq eval '. | select(.kind == "ServiceAccount") | .metadata.name')
-          K8S_SERVER_CERTIFICATE=$(cat ~/.kube/config | yq -r ".clusters[] | select(.name == \"$(cat ~/.kube/config | yq -r '.current-context')\").cluster.certificate-authority-data")
+          K8S_SERVER_CERTIFICATE=$(cat ~/.kube/config | yq -r ".clusters[] | select(.name == \"$(cat ~/.kube/config | yq -r '.current-context')\").cluster.certificate-authority-data // \"\"")
           K8S_SERVER_HOST=$(cat ~/.kube/config | yq -r ".clusters[] | select(.name == \"$(cat ~/.kube/config | yq -r '.current-context')\").cluster.server")
           SERVICE_ACCOUNT_TOKEN=$(kubectl create token ${SERVICE_ACCOUNT_NAME} -n ${SERVICE_ACCOUNT_NAMESPACE} --duration=87600h)
           echo "SERVICE_ACCOUNT_NAME=$SERVICE_ACCOUNT_NAME" >> $GITHUB_ENV
