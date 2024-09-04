@@ -142,8 +142,8 @@ jobs:
           name: kube-config
           path: ~/.kube
 
-      - name: Install kubectl
-        run: rm .platform/component.yaml
+      # - name: Install kubectl
+      #   run: rm .platform/component.yaml
 
       - name: Download component.yaml
         uses: actions/download-artifact@v3
