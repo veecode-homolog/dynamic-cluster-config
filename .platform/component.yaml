@@ -19,10 +19,11 @@ metadata:
     kubernetes.io/secret-name: 'dynamic-cluster-config-secret'
     kubernetes.io/secret-namespace: 'veecode-homolog'
     kubernetes.io/auth-provider: 'custom'
-    kubernetes.io/api-server: ""
+    kubernetes.io/api-server: "https://54.211.184.100:6550"
     kubernetes.io/skip-tls-verify: "true"
     kubernetes.io/skip-metrics-lookup: "false"
     veecode/cluster-name: "dynamic-cluster-config"
+    kubernetes.io/caData: "null"
 spec:
   type: ec2
   lifecycle: experimental
