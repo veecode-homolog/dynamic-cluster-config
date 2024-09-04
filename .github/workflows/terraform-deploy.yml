@@ -149,7 +149,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: component-catalog
-          path: .platform/component.yaml
+          path: .platform
 
       - name: Install Helm
         run: |
