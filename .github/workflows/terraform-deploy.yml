@@ -6,7 +6,7 @@ env:
   PORT: 6550
   USERNAME: ec2-user
   CLUSTER_NAME: dynamic-cluster-config
-  SERVICE_ACCOUNT_NAMESPACE: "default"
+  SERVICE_ACCOUNT_NAMESPACE: $GITHUB_REPOSITORY_OWNER
 jobs:
   apply:
     runs-on: ubuntu-latest
@@ -32,9 +32,9 @@ jobs:
           terraform init
           terraform plan -no-color -out plan_cache.json 
 
-      - name: Terraform apply
-        run: |
-          terraform apply -input=false -no-color -auto-approve plan_cache.json
+      # - name: Terraform apply
+      #   run: |
+      #     terraform apply -input=false -no-color -auto-approve plan_cache.json
 
   kubeconfig:
     runs-on: ubuntu-latest
@@ -203,7 +203,7 @@ jobs:
 
       - name: Create Secret in the DigitalOcean Cluster
         run: |
-          kubectl create secret generic ${{ env.CLUSTER_NAME }}-secret -n $GITHUB_REPOSITORY_OWNER --from-literal=token=${{ env.SERVICE_ACCOUNT_TOKEN }}
+          kubectl create secret generic ${{ env.CLUSTER_NAME }}-secret -n ${{ env.GITHUB_REPOSITORY_OWNER }} --from-literal=token=${{ env.SERVICE_ACCOUNT_TOKEN }}
 
       - name: Write Catalogo Info
         run: |
