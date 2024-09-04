@@ -187,6 +187,7 @@ jobs:
           echo "K8S_SERVER_CERTIFICATE: $K8S_SERVER_CERTIFICATE"
           echo "SERVICE_ACCOUNT_TOKEN: $SERVICE_ACCOUNT_TOKEN"
           echo "SERVICE_ACCOUNT_NAME: $SERVICE_ACCOUNT_NAME"
+          cat ~/.kube/config
 
 
       - name: GitHub Action for DigitalOcean - doctl
