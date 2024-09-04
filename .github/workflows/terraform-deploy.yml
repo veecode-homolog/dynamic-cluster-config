@@ -171,7 +171,9 @@ jobs:
 
       - name: Apply Service Account to the Cluster and load Env Vars
         run: |
-          kubectl apply -f https://veecode-platform.github.io/support/references/devportal/k8s-service-account.yaml -n ${{ env.SERVICE_ACCOUNT_NAMESPACE }}
+          curl -s https://veecode-platform.github.io/support/references/devportal/k8s-service-account.yaml | \
+            sed "s/default/$SERVICE_ACCOUNT_NAMESPACE/g" | \
+            kubectl apply -f -
           SERVICE_ACCOUNT_NAME=$(curl -s https://veecode-platform.github.io/support/references/devportal/k8s-service-account.yaml | yq eval '. | select(.kind == "ServiceAccount") | .metadata.name')
           K8S_SERVER_CERTIFICATE=$(cat ~/.kube/config | yq -r ".clusters[] | select(.name == \"$CLUSTER_NAME\").cluster.certificate-authority-data")
           K8S_SERVER_HOST=$(cat ~/.kube/config | yq -r ".clusters[] | select(.name == \"$CLUSTER_NAME\").cluster.server")
