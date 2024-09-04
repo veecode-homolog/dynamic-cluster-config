@@ -16,7 +16,7 @@ metadata:
     backstage.io/techdocs-ref: dir:..
     github.com/workflows: terraform-deploy.yml,start-instance.yml,stop-instance.yml,kubeconfig.yml,terraform-destroy.yml,infracost.yml
     cluster/instructions: "# Run the following commands to import the kubeconfig:\n  ssh -i ./cert.pem -o StrictHostKeyChecking=no $USERNAME@$54.211.184.100 \"mkdir -p .kube && k3d kubeconfig get k3s > ~/.kube/config\"\n  scp -i ./cert.pem $USERNAME@$54.211.184.100:~/.kube/config ~/.kube/config-dynamic-cluster-config\n  yq -e 'del(.clusters[0].cluster.certificate-authority-data) | .clusters[0].cluster.insecure-skip-tls-verify=true | .clusters[].cluster.server |= sub(\"0.0.0.0\", \"54.211.184.100\")' -i ~/.kube/config-dynamic-cluster-config\n  export KUBECONFIG=~/.kube/config-dynamic-cluster-config\n  kubectl get pods -A\n"
-    kubernetes.io/secret-name: '$SECRET_NAME'
+    kubernetes.io/secret-name: 'dynamic-cluster-config-secret'
     kubernetes.io/secret-namespace: 'veecode-homolog'
     kubernetes.io/auth-provider: 'custom'
     kubernetes.io/api-server: ""
