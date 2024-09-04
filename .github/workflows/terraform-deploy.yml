@@ -210,12 +210,14 @@ jobs:
       - name: Write Catalogo Info
         run: |
           SECRET_NAME="${{ env.CLUSTER_NAME }}-secret"
-          yq e '.metadata.annotations."veecode/cluster-name" = "${{ env.CLUSTER_NAME }}"' -i .platform/component.yaml
-          yq e '.metadata.annotations."kubernetes.io/secret-namespace" = "${{ github.repository_owner }}"' -i .platform/component.yaml
-          yq e '.metadata.annotations."kubernetes.io/secret-name" = "$SECRET_NAME"' -i .platform/component.yaml
-          yq e '.metadata.annotations."kubernetes.io/auth-provider" = "custom"' -i .platform/component.yaml
-
-          yq e '.metadata.annotations."kubernetes.io/api-server" = "${{ env.K8S_SERVER_HOST }}"' -i .platform/component.yaml
+          yq e '''
+          .metadata.annotations."veecode/cluster-name" = "${{ env.CLUSTER_NAME }}" |
+          .metadata.annotations."kubernetes.io/secret-namespace" = "${{ github.repository_owner }}" |
+          .metadata.annotations."kubernetes.io/secret-name" = "$SECRET_NAME" |
+          .metadata.annotations."kubernetes.io/auth-provider" = "custom" |
+          .metadata.annotations."kubernetes.io/api-server" = "${{ env.K8S_SERVER_HOST }}"
+          ''' -i .platform/component.yaml
+          
           if [ -z "$K8S_SERVER_CERTIFICATE" ]; then
             yq e '.metadata.annotations."kubernetes.io/skip-tls-verify" = "true"' -i .platform/component.yaml
           else
