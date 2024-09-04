@@ -204,6 +204,7 @@ jobs:
 
       - name: Create Secret in the DigitalOcean Cluster
         run: |
+          kubectl delete secret ${{ env.CLUSTER_NAME }}-secret -n ${{ github.repository_owner }} || true
           kubectl create secret generic ${{ env.CLUSTER_NAME }}-secret -n ${{ github.repository_owner }} --from-literal=token=${{ env.SERVICE_ACCOUNT_TOKEN }}
 
       - name: Write Catalogo Info
