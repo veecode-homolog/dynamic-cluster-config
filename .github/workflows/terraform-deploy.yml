@@ -91,7 +91,7 @@ jobs:
         run: |
           yq e '.metadata.environment.public_ip = "${{ env.Host }}"' -i .platform/component.yaml
           yq -e '.metadata.annotations["cluster/instructions"] = "# Run the following commands to import the kubeconfig:
-            ssh -i ./cert.pem -o StrictHostKeyChecking=no $USERNAME@$${{ env.Host }} \"mkdir -p .kube && k3d kubeconfig get k3s > ~/.kube/config\"
+            ssh -i ./cert.pem -o StrictHostKeyChecking=no $USERNAME@${{ env.Host }} \"mkdir -p .kube && k3d kubeconfig get k3s > ~/.kube/config\"
             scp -i ./cert.pem $USERNAME@$${{ env.Host }}:~/.kube/config ~/.kube/config-dynamic-cluster-config
             yq -e '\''del(.clusters[0].cluster.certificate-authority-data) | .clusters[0].cluster.insecure-skip-tls-verify=true | .clusters[].cluster.server |= sub(\"0.0.0.0\", \"${{ env.Host }}\")'\'' -i ~/.kube/config-dynamic-cluster-config
             export KUBECONFIG=~/.kube/config-dynamic-cluster-config
@@ -176,13 +176,14 @@ jobs:
             sed "s/default/$SERVICE_ACCOUNT_NAMESPACE/g" | \
             kubectl apply -f -
           SERVICE_ACCOUNT_NAME=$(curl -s https://veecode-platform.github.io/support/references/devportal/k8s-service-account.yaml | yq eval '. | select(.kind == "ServiceAccount") | .metadata.name')
-          K8S_SERVER_CERTIFICATE=$(cat ~/.kube/config | yq -r ".clusters[] | select(.name == \"${{ env.CLUSTER_NAME }}\").cluster.certificate-authority-data")
-          K8S_SERVER_HOST=$(cat ~/.kube/config | yq -r ".clusters[] | select(.name == \"${{ env.CLUSTER_NAME }}\").cluster.server")
+          K8S_SERVER_CERTIFICATE=$(cat ~/.kube/config | yq -r ".clusters[] | select(.name == \"$(cat ~/.kube/config | yq -r '.current-context')\").cluster.certificate-authority-data")
+          K8S_SERVER_HOST=$(cat ~/.kube/config | yq -r ".clusters[] | select(.name == \"$(cat ~/.kube/config | yq -r '.current-context')\").cluster.server")
           SERVICE_ACCOUNT_TOKEN=$(kubectl create token ${SERVICE_ACCOUNT_NAME} -n ${SERVICE_ACCOUNT_NAMESPACE} --duration=87600h)
           echo "SERVICE_ACCOUNT_NAME=$SERVICE_ACCOUNT_NAME" >> $GITHUB_ENV
           echo "SERVICE_ACCOUNT_TOKEN=$SERVICE_ACCOUNT_TOKEN" >> $GITHUB_ENV
           echo "K8S_SERVER_CERTIFICATE=$K8S_SERVER_CERTIFICATE" >> $GITHUB_ENV
           echo "K8S_SERVER_HOST=$K8S_SERVER_HOST" >> $GITHUB_ENV
+
           echo "K8S_SERVER_HOST: $K8S_SERVER_HOST"
           echo "K8S_SERVER_CERTIFICATE: $K8S_SERVER_CERTIFICATE"
           echo "SERVICE_ACCOUNT_TOKEN: $SERVICE_ACCOUNT_TOKEN"
