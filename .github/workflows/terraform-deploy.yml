@@ -204,13 +204,13 @@ jobs:
 
       - name: Create Secret in the DigitalOcean Cluster
         run: |
-          kubectl create secret generic ${{ env.CLUSTER_NAME }}-secret -n ${{ env.GITHUB_REPOSITORY_OWNER }} --from-literal=token=${{ env.SERVICE_ACCOUNT_TOKEN }}
+          kubectl create secret generic ${{ env.CLUSTER_NAME }}-secret -n ${{ github.repository_owner }} --from-literal=token=${{ env.SERVICE_ACCOUNT_TOKEN }}
 
       - name: Write Catalogo Info
         run: |
           SECRET_NAME="${{ env.CLUSTER_NAME }}-secret"
           yq e '.metadata.annotations."veecode/cluster-name" = "${{ env.CLUSTER_NAME }}"' -i .platform/component.yaml
-          yq e '.metadata.annotations."kubernetes.io/secret-namespace" = "${{ env.GITHUB_REPOSITORY_OWNER }}"' -i .platform/component.yaml
+          yq e '.metadata.annotations."kubernetes.io/secret-namespace" = "${{ github.repository_owner }}"' -i .platform/component.yaml
           yq e '.metadata.annotations."kubernetes.io/secret-name" = "$SECRET_NAME"' -i .platform/component.yaml
           yq e '.metadata.annotations."kubernetes.io/auth-provider" = "custom"' -i .platform/component.yaml
 
