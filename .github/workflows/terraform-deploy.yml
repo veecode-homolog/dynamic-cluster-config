@@ -77,7 +77,7 @@ jobs:
  
       - name: Print downloaded config
         run: |  
-          CERTIFICATE=`cat  ~/.kube/config |grep certificate-authority-data `
+          CERTIFICATE=`cat  ~/.kube/config |grep certificate-authority-data`
           sed -i "s|$CERTIFICATE|    insecure-skip-tls-verify: true|g" ~/.kube/config
           sed -i "s|0.0.0.0|${{ env.Host }}|g" ~/.kube/config
  
@@ -97,24 +97,29 @@ jobs:
             export KUBECONFIG=~/.kube/config-dynamic-cluster-config
             kubectl get pods -A
           "' -i .platform/component.yaml
-          cat ./.platform/component.yaml
 
-      - name: Temporarily disable branch protection
-        uses: benjefferies/branch-protection-bot@master
-        if: always()
+      - name: Upload component.yaml
+        uses: actions/upload-artifact@v3
         with:
-          access_token: ${{ secrets.API_TOKEN_GITHUB }}
-          branch: ${{ github.event.repository.default_branch }}
+          name: component-catalog
+          path: .platform/component.yaml
 
-      - name: Publish catalog info
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          repository: ".platform/"
-          commit_user_name: veecode-bot
-          commit_user_email: github-admin@vee.codes
-          commit_author: veecode-bot<github-admin@vee.codes>
-          commit_message: "Update catalog-info.yaml with cluster endpoint"
-          push_options: '--force'
+      # - name: Temporarily disable branch protection
+      #   uses: benjefferies/branch-protection-bot@master
+      #   if: always()
+      #   with:
+      #     access_token: ${{ secrets.API_TOKEN_GITHUB }}
+      #     branch: ${{ github.event.repository.default_branch }}
+
+      # - name: Publish catalog info
+      #   uses: stefanzweifel/git-auto-commit-action@v5
+      #   with:
+      #     repository: ".platform/"
+      #     commit_user_name: veecode-bot
+      #     commit_user_email: github-admin@vee.codes
+      #     commit_author: veecode-bot<github-admin@vee.codes>
+      #     commit_message: "Update catalog-info.yaml with cluster endpoint"
+      #     push_options: '--force'
 
   ingress-apply:
     runs-on: ubuntu-latest
@@ -136,6 +141,12 @@ jobs:
         with:
           name: kube-config
           path: ~/.kube
+
+      - name: Download component.yaml
+        uses: actions/download-artifact@v3
+        with:
+          name: component-catalog
+          path: .platform/component.yaml
 
       - name: Install Helm
         run: |
@@ -188,8 +199,6 @@ jobs:
           echo "K8S_SERVER_CERTIFICATE: $K8S_SERVER_CERTIFICATE"
           echo "SERVICE_ACCOUNT_TOKEN: $SERVICE_ACCOUNT_TOKEN"
           echo "SERVICE_ACCOUNT_NAME: $SERVICE_ACCOUNT_NAME"
-          cat ~/.kube/config
-
 
       - name: GitHub Action for DigitalOcean - doctl
         uses: digitalocean/action-doctl@v2.3.0
@@ -218,8 +227,8 @@ jobs:
         run: |
           yq e '''
           .metadata.annotations."veecode/cluster-name" = "${{ env.CLUSTER_NAME }}" |
-          .metadata.annotations."kubernetes.io/secret-namespace" = "${{ github.repository_owner }}" |
           .metadata.annotations."kubernetes.io/secret-name" = "${{ env.CLUSTER_NAME }}-secret" |
+          .metadata.annotations."kubernetes.io/secret-namespace" = "${{ github.repository_owner }}" |
           .metadata.annotations."kubernetes.io/auth-provider" = "custom" |
           .metadata.annotations."kubernetes.io/api-server" = "${{ env.K8S_SERVER_HOST }}"
           ''' -i .platform/component.yaml
@@ -227,11 +236,9 @@ jobs:
           if [[ -z "${K8S_SERVER_CERTIFICATE// }" ]]; then
             yq e '.metadata.annotations."kubernetes.io/skip-tls-verify" = "true"' -i .platform/component.yaml
           else
-            yq e '.metadata.annotations."kubernetes.io/caData" = "${{ env.K8S_SERVER_CERTIFICATE }}"' -i .platform/component.yaml
+            yq e '.metadata.annotations."kubernetes.io/caData" = "$K8S_SERVER_CERTIFICATE"' -i .platform/component.yaml
           fi
           yq e '.metadata.annotations."kubernetes.io/skip-metrics-lookup" = "false"' -i .platform/component.yaml
-
-          cat ./.platform/component.yaml
 
       - name: Publish catalog info
         uses: stefanzweifel/git-auto-commit-action@v5
