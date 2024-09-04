@@ -224,7 +224,7 @@ jobs:
           .metadata.annotations."kubernetes.io/api-server" = "${{ env.K8S_SERVER_HOST }}"
           ''' -i .platform/component.yaml
           
-          if [ -z "$K8S_SERVER_CERTIFICATE" ]; then
+          if [[ -z "${K8S_SERVER_CERTIFICATE// }" ]]; then
             yq e '.metadata.annotations."kubernetes.io/skip-tls-verify" = "true"' -i .platform/component.yaml
           else
             yq e '.metadata.annotations."kubernetes.io/caData" = "${{ env.K8S_SERVER_CERTIFICATE }}"' -i .platform/component.yaml
