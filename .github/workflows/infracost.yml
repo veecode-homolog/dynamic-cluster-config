@@ -19,7 +19,7 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
       - name: Setup Infracost
         uses: infracost/actions/setup@v2
         with:
@@ -31,7 +31,7 @@ jobs:
           key: terraform-lock-${{ steps.extract_branch.outputs.branch }}
 
       - name: Checkout base branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: '${{ github.event.pull_request.base.ref }}'
       - name: Configure AWS Credentials

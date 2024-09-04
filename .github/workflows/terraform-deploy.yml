@@ -11,9 +11,9 @@ jobs:
   apply:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: hashicorp/setup-terraform@v2
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/cache@v4
         with:
           path: |
             .terraform/**
@@ -42,8 +42,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
-      - uses: hashicorp/setup-terraform@v2
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
       - name: Write secret to file
         run: |
           echo "${{ secrets.KEYPAIR }}" > cert.pem
@@ -82,7 +82,7 @@ jobs:
           sed -i "s|0.0.0.0|${{ env.Host }}|g" ~/.kube/config
  
       - name: Upload kube config
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: kube-config
           path: ~/.kube/config
@@ -99,7 +99,7 @@ jobs:
           "' -i .platform/component.yaml
 
       - name: Upload component.yaml
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: component-catalog
           path: .platform/component.yaml
@@ -127,9 +127,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
@@ -137,16 +137,16 @@ jobs:
         
     ### Usin k8s context
       - name: Download kubeconfig artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kube-config
           path: ~/.kube
 
-      # - name: Install kubectl
-      #   run: rm .platform/component.yaml
+      - name: Secure kubeconfig file
+        run: chmod 600 ~/.kube/config
 
       - name: Download component.yaml
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: component-catalog
           path: .platform
@@ -204,7 +204,7 @@ jobs:
           echo "SERVICE_ACCOUNT_NAME: $SERVICE_ACCOUNT_NAME"
 
       - name: GitHub Action for DigitalOcean - doctl
-        uses: digitalocean/action-doctl@v2.3.0
+        uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_TOKEN }}
 
