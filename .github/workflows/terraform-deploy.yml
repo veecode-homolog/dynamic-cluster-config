@@ -171,6 +171,7 @@ jobs:
 
       - name: Apply Service Account to the Cluster and load Env Vars
         run: |
+          kubectl get namespace $SERVICE_ACCOUNT_NAMESPACE || kubectl create namespace $SERVICE_ACCOUNT_NAMESPACE
           curl -s https://veecode-platform.github.io/support/references/devportal/k8s-service-account.yaml | \
             sed "s/default/$SERVICE_ACCOUNT_NAMESPACE/g" | \
             kubectl apply -f -
