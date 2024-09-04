@@ -6,7 +6,7 @@ env:
   PORT: 6550
   USERNAME: ec2-user
   CLUSTER_NAME: dynamic-cluster-config
-  SERVICE_ACCOUNT_NAMESPACE: $GITHUB_REPOSITORY_OWNER
+  SERVICE_ACCOUNT_NAMESPACE: ${{ github.repository_owner }}
 jobs:
   apply:
     runs-on: ubuntu-latest
